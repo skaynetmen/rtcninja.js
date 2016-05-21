@@ -324,6 +324,7 @@ var merge = require('merge'),
 	debug = require('debug')('rtcninja:RTCPeerConnection'),
 	debugerror = require('debug')('rtcninja:ERROR:RTCPeerConnection'),
 	Adapter = require('./Adapter'),
+	browser = require('bowser'),
 
 	// Internal constants.
 	C = {
@@ -629,7 +630,20 @@ RTCPeerConnection.prototype.addStream = function (stream) {
 RTCPeerConnection.prototype.removeStream = function (stream) {
 	debug('removeStream() | stream: %o', stream);
 
-	this.pc.removeStream(stream);
+	var self = this;
+
+	// Firefox removeStream not implemented
+	if (browser.firefox) {
+		self.pc.getSenders().forEach(function (sender) {
+			stream.getTracks().forEach(function (track) {
+				if (sender.track === track) {
+					self.pc.removeTrack(sender);
+				}
+			});
+		});
+	} else {
+		self.pc.removeStream(stream);
+	}
 };
 
 
@@ -1062,7 +1076,7 @@ function setProperties() {
 	});
 }
 
-},{"./Adapter":1,"debug":6,"merge":9}],3:[function(require,module,exports){
+},{"./Adapter":1,"bowser":5,"debug":6,"merge":9}],3:[function(require,module,exports){
 'use strict';
 
 module.exports = rtcninja;
@@ -1353,6 +1367,13 @@ module.exports = require('../package.json').version;
       , version: getFirstMatch(/phantomjs\/(\d+(\.\d+)?)/i)
       }
     }
+    else if (/slimerjs/i.test(ua)) {
+      result = {
+        name: 'SlimerJS'
+        , slimer: t
+        , version: getFirstMatch(/slimerjs\/(\d+(\.\d+)?)/i)
+      }
+    }
     else if (/blackberry|\bbb\d+/i.test(ua) || /rim\stablet/i.test(ua)) {
       result = {
         name: 'BlackBerry'
@@ -1387,6 +1408,13 @@ module.exports = require('../package.json').version;
         name: 'QupZilla'
         , qupzilla: t
         , version: getFirstMatch(/(?:qupzilla)[\s\/](\d+(?:\.\d+)+)/i) || versionIdentifier
+      }
+    }
+    else if (/chromium/i.test(ua)) {
+      result = {
+        name: 'Chromium'
+        , chromium: t
+        , version: getFirstMatch(/(?:chromium)[\s\/](\d+(?:\.\d+)?)/i) || versionIdentifier
       }
     }
     else if (/chrome|crios|crmo/i.test(ua)) {
